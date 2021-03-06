@@ -273,6 +273,42 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
         }
     }
 
+    static State translate(final int status) {
+        switch (status) {
+        case Status.INFEASIBLE:
+            return Optimisation.State.INFEASIBLE;
+        case Status.ITERATION_LIMIT:
+            return Optimisation.State.APPROXIMATE;
+        case Status.CUTOFF:
+            return Optimisation.State.APPROXIMATE;
+        case Status.INF_OR_UNBD:
+            return Optimisation.State.INVALID;
+        case Status.INPROGRESS:
+            return Optimisation.State.UNEXPLORED;
+        case Status.INTERRUPTED:
+            return Optimisation.State.UNEXPLORED;
+        case Status.LOADED:
+            return Optimisation.State.UNEXPLORED;
+        case Status.NODE_LIMIT:
+            return Optimisation.State.APPROXIMATE;
+        case Status.NUMERIC:
+            return Optimisation.State.APPROXIMATE;
+        case Status.OPTIMAL:
+            return Optimisation.State.OPTIMAL;
+        case Status.SOLUTION_LIMIT:
+            return Optimisation.State.APPROXIMATE;
+        case Status.SUBOPTIMAL:
+            return Optimisation.State.APPROXIMATE;
+        case Status.TIME_LIMIT:
+            return Optimisation.State.APPROXIMATE;
+        case Status.UNBOUNDED:
+            return Optimisation.State.UNBOUNDED;
+        default:
+            return Optimisation.State.FAILED;
+        }
+
+    }
+
     private final GRBModel myDelegateSolver;
 
     private final Optimisation.Options myOptions;
@@ -321,7 +357,7 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
             myDelegateSolver.optimize();
 
-            retState = this.translate(myDelegateSolver.get(IntAttr.Status));
+            retState = SolverGurobi.translate(myDelegateSolver.get(IntAttr.Status));
 
             if (retState.isFeasible()) {
 
@@ -349,42 +385,6 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
     GRBModel getDelegateSolver() {
         return myDelegateSolver;
-    }
-
-    State translate(final int status) {
-        switch (status) {
-        case Status.INFEASIBLE:
-            return Optimisation.State.INFEASIBLE;
-        case Status.ITERATION_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.CUTOFF:
-            return Optimisation.State.APPROXIMATE;
-        case Status.INF_OR_UNBD:
-            return Optimisation.State.INVALID;
-        case Status.INPROGRESS:
-            return Optimisation.State.UNEXPLORED;
-        case Status.INTERRUPTED:
-            return Optimisation.State.UNEXPLORED;
-        case Status.LOADED:
-            return Optimisation.State.UNEXPLORED;
-        case Status.NODE_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.NUMERIC:
-            return Optimisation.State.APPROXIMATE;
-        case Status.OPTIMAL:
-            return Optimisation.State.OPTIMAL;
-        case Status.SOLUTION_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.SUBOPTIMAL:
-            return Optimisation.State.APPROXIMATE;
-        case Status.TIME_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.UNBOUNDED:
-            return Optimisation.State.UNBOUNDED;
-        default:
-            return Optimisation.State.FAILED;
-        }
-
     }
 
 }

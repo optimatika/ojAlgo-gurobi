@@ -52,16 +52,16 @@ import gurobi.GRBQuadExpr;
 import gurobi.GRBVar;
 
 @SuppressWarnings("restriction")
-public final class SolverGurobi implements Optimisation.Solver {
+public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
     @FunctionalInterface
-    public static interface Configurator {
+    public interface Configurator {
 
         void configure(final GRBEnv environment, final GRBModel model, final Optimisation.Options options);
 
     }
 
-    static final class Integration extends ExpressionsBasedModel.Integration<SolverGurobi> {
+    static final class Integration extends ExpressionsBasedModel.Integration<SolverGurobi> implements AutoCloseable {
 
         private final GRBEnv myEnvironment;
         private final PrinterBuffer myLog = new CharacterRing().asPrinter();
@@ -73,10 +73,25 @@ public final class SolverGurobi implements Optimisation.Solver {
             GRBEnv tmpGRBEnv;
             try {
                 tmpGRBEnv = new GRBEnv();
-            } catch (final GRBException anException) {
+            } catch (final GRBException cause) {
                 tmpGRBEnv = null;
             }
 
+            myEnvironment = tmpGRBEnv;
+        }
+
+        Integration(final String accessKey, final String secret) {
+            super();
+            GRBEnv tmpGRBEnv;
+            try {
+                if ((accessKey != null) && (secret != null)) {
+                    tmpGRBEnv = new GRBEnv(null, accessKey, secret, null, 0);
+                } else {
+                    tmpGRBEnv = new GRBEnv();
+                }
+            } catch (final GRBException cause) {
+                tmpGRBEnv = null;
+            }
             myEnvironment = tmpGRBEnv;
         }
 
@@ -151,17 +166,20 @@ public final class SolverGurobi implements Optimisation.Solver {
 
         }
 
+        @Override
+        public void close() throws Exception {
+            if (myEnvironment != null) {
+                myEnvironment.dispose();
+            }
+        }
+
         public boolean isCapable(final ExpressionsBasedModel model) {
             return true;
         }
 
         @Override
-        protected final void finalize() throws Throwable {
-
-            if (myEnvironment != null) {
-                myEnvironment.dispose();
-            }
-
+        protected void finalize() throws Throwable {
+            this.close();
             super.finalize();
         }
 
@@ -170,7 +188,7 @@ public final class SolverGurobi implements Optimisation.Solver {
             return true;
         }
 
-        final GRBEnv getEnvironment() {
+        GRBEnv getEnvironment() {
             return myEnvironment;
         }
 
@@ -185,6 +203,10 @@ public final class SolverGurobi implements Optimisation.Solver {
         }
 
     };
+
+    public static SolverGurobi.Integration newInstantCloudIntegration(final String accessKey, final String secret) {
+        return new Integration(accessKey, secret);
+    }
 
     static void addConstraint(final GRBModel model, final GRBExpr expr, final char sense, final double rhs, final String name) {
         try {
@@ -261,6 +283,11 @@ public final class SolverGurobi implements Optimisation.Solver {
 
         myDelegateSolver = model;
         myOptions = options;
+    }
+
+    @Override
+    public void close() throws Exception {
+        this.dispose();
     }
 
     public void dispose() {

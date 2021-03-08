@@ -1,5 +1,6 @@
+package org.ojalgo.optimisation.solver.gurobi;
 /*
- * Copyright 1997-2021 Optimatika
+ * Copyright 1997-2020 Optimatika
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,20 +20,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.ojalgo.optimisation.solver.gurobi;
 
-import static gurobi.GRB.*;
-import static org.ojalgo.function.constant.PrimitiveMath.*;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import gurobi.GRB.*;
+import gurobi.*;
 import org.ojalgo.array.Primitive64Array;
-import org.ojalgo.netio.CharacterRing;
-import org.ojalgo.netio.CharacterRing.PrinterBuffer;
 import org.ojalgo.optimisation.Expression;
 import org.ojalgo.optimisation.ExpressionsBasedModel;
 import org.ojalgo.optimisation.Optimisation;
@@ -40,65 +31,50 @@ import org.ojalgo.optimisation.Variable;
 import org.ojalgo.structure.Structure1D.IntIndex;
 import org.ojalgo.structure.Structure2D.IntRowColumn;
 
-import gurobi.GRB.DoubleAttr;
-import gurobi.GRB.IntAttr;
-import gurobi.GRB.Status;
-import gurobi.GRBEnv;
-import gurobi.GRBException;
-import gurobi.GRBExpr;
-import gurobi.GRBLinExpr;
-import gurobi.GRBModel;
-import gurobi.GRBQuadExpr;
-import gurobi.GRBVar;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static gurobi.GRB.*;
+import static org.ojalgo.function.constant.PrimitiveMath.NaN;
+import static org.ojalgo.function.constant.PrimitiveMath.ZERO;
 
 @SuppressWarnings("restriction")
-public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
+public final class SolverGurobi implements Optimisation.Solver {
+
+    private final GRBModel myDelegateSolver;
+    private final Options myOptions;
 
     @FunctionalInterface
     public interface Configurator {
 
-        void configure(final GRBEnv environment, final GRBModel model, final Optimisation.Options options);
+        void configure(final GRBEnv environment, final GRBModel model, final Options options);
 
     }
 
     static final class Integration extends ExpressionsBasedModel.Integration<SolverGurobi> implements AutoCloseable {
 
         private final GRBEnv myEnvironment;
-        private final PrinterBuffer myLog = new CharacterRing().asPrinter();
-
-        Integration() {
-
-            super();
-
-            GRBEnv tmpGRBEnv;
-            try {
-                tmpGRBEnv = new GRBEnv();
-            } catch (final GRBException cause) {
-                tmpGRBEnv = null;
-            }
-
-            myEnvironment = tmpGRBEnv;
-        }
 
         Integration(final String accessKey, final String secret) {
             super();
             GRBEnv tmpGRBEnv;
             try {
-                if ((accessKey != null) && (secret != null)) {
+                if (accessKey != null && secret != null) {
                     tmpGRBEnv = new GRBEnv(null, accessKey, secret, null, 0);
                 } else {
                     tmpGRBEnv = new GRBEnv();
                 }
-            } catch (final GRBException cause) {
+            } catch (final GRBException anException) {
                 tmpGRBEnv = null;
             }
             myEnvironment = tmpGRBEnv;
         }
 
         public SolverGurobi build(final ExpressionsBasedModel model) {
-
             try {
-
                 final GRBModel delegateSolver = new GRBModel(myEnvironment);
                 final SolverGurobi retVal = new SolverGurobi(delegateSolver, model.options);
 
@@ -166,47 +142,38 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
         }
 
-        @Override
-        public void close() throws Exception {
-            if (myEnvironment != null) {
-                myEnvironment.dispose();
-            }
-        }
-
         public boolean isCapable(final ExpressionsBasedModel model) {
             return true;
         }
 
-        @Override
-        protected void finalize() throws Throwable {
-            this.close();
-            super.finalize();
-        }
 
         @Override
         protected boolean isSolutionMapped() {
             return true;
         }
 
-        GRBEnv getEnvironment() {
+        final GRBEnv getEnvironment() {
             return myEnvironment;
         }
 
+        @Override
+        public void close() throws Exception {
+            if (myEnvironment != null) {
+                myEnvironment.dispose();
+            }
+        }
     }
 
-    public static final SolverGurobi.Integration INTEGRATION = new Integration();
+    public static final Integration INTEGRATION = new Integration(null, null);
 
-    static final Configurator DEFAULT = new Configurator() {
-
-        public void configure(final GRBEnv environment, final GRBModel model, final Options options) {
-            // TODO Auto-generated method stub
-        }
-
-    };
-
-    public static SolverGurobi.Integration newInstantCloudIntegration(final String accessKey, final String secret) {
+    public static Integration newInstantCloudIntegration(final String accessKey, final String secret) {
         return new Integration(accessKey, secret);
     }
+
+
+    static final Configurator DEFAULT = (environment, model, options) -> {
+        // TODO Auto-generated method stub
+    };
 
     static void addConstraint(final GRBModel model, final GRBExpr expr, final char sense, final double rhs, final String name) {
         try {
@@ -223,7 +190,7 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
     static GRBExpr buildExpression(final Expression expression, final ExpressionsBasedModel model, final GRBVar[] vars) throws GRBException {
 
         GRBLinExpr linExpr = null;
-        GRBQuadExpr quadExpr = null;
+        GRBQuadExpr quadExpr;
         GRBExpr retVal = null;
 
         if (expression.isAnyLinearFactorNonZero()) {
@@ -273,63 +240,17 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
         }
     }
 
-    static State translate(final int status) {
-        switch (status) {
-        case Status.INFEASIBLE:
-            return Optimisation.State.INFEASIBLE;
-        case Status.ITERATION_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.CUTOFF:
-            return Optimisation.State.APPROXIMATE;
-        case Status.INF_OR_UNBD:
-            return Optimisation.State.INVALID;
-        case Status.INPROGRESS:
-            return Optimisation.State.UNEXPLORED;
-        case Status.INTERRUPTED:
-            return Optimisation.State.UNEXPLORED;
-        case Status.LOADED:
-            return Optimisation.State.UNEXPLORED;
-        case Status.NODE_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.NUMERIC:
-            return Optimisation.State.APPROXIMATE;
-        case Status.OPTIMAL:
-            return Optimisation.State.OPTIMAL;
-        case Status.SOLUTION_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.SUBOPTIMAL:
-            return Optimisation.State.APPROXIMATE;
-        case Status.TIME_LIMIT:
-            return Optimisation.State.APPROXIMATE;
-        case Status.UNBOUNDED:
-            return Optimisation.State.UNBOUNDED;
-        default:
-            return Optimisation.State.FAILED;
-        }
 
-    }
 
-    private final GRBModel myDelegateSolver;
-
-    private final Optimisation.Options myOptions;
-
-    SolverGurobi(final GRBModel model, final Optimisation.Options options) {
-
+    SolverGurobi(final GRBModel model, final Options options) {
         super();
-
         myDelegateSolver = model;
         myOptions = options;
     }
 
     @Override
-    public void close() throws Exception {
-        this.dispose();
-    }
-
     public void dispose() {
-
         Solver.super.dispose();
-
         if (myDelegateSolver != null) {
             myDelegateSolver.dispose();
         }
@@ -339,7 +260,7 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
         final GRBVar[] tmpVars = myDelegateSolver.getVars();
 
-        Optimisation.State retState = Optimisation.State.UNEXPLORED;
+        State retState = State.UNEXPLORED;
         double retValue = NaN;
         final Primitive64Array retSolution = Primitive64Array.make(myDelegateSolver.getVars().length);
 
@@ -349,15 +270,13 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
 
             DEFAULT.configure(tmpEnvironment, myDelegateSolver, myOptions);
             final Optional<Configurator> optional = myOptions.getConfigurator(Configurator.class);
-            if (optional.isPresent()) {
-                optional.get().configure(tmpEnvironment, myDelegateSolver, myOptions);
-            }
+            optional.ifPresent(configurator -> configurator.configure(tmpEnvironment, myDelegateSolver, myOptions));
 
-            myDelegateSolver.getEnv().set(gurobi.GRB.IntParam.OutputFlag, 0);
+            myDelegateSolver.getEnv().set(IntParam.OutputFlag, 0);
 
             myDelegateSolver.optimize();
 
-            retState = SolverGurobi.translate(myDelegateSolver.get(IntAttr.Status));
+            retState = this.translate(myDelegateSolver.get(IntAttr.Status));
 
             if (retState.isFeasible()) {
 
@@ -372,19 +291,35 @@ public final class SolverGurobi implements Optimisation.Solver, AutoCloseable {
             exception.printStackTrace();
         }
 
-        return new Optimisation.Result(retState, retValue, retSolution);
+        return new Result(retState, retValue, retSolution);
     }
 
-    @Override
-    protected void finalize() throws Throwable {
+    State translate(final int status) {
+        switch (status) {
+            case Status.INFEASIBLE:
+                return State.INFEASIBLE;
+            case Status.ITERATION_LIMIT:
+            case Status.CUTOFF:
+            case Status.NODE_LIMIT:
+            case Status.NUMERIC:
+            case Status.SOLUTION_LIMIT:
+            case Status.SUBOPTIMAL:
+            case Status.TIME_LIMIT:
+                return State.APPROXIMATE;
+            case Status.INF_OR_UNBD:
+                return State.INVALID;
+            case Status.INPROGRESS:
+            case Status.INTERRUPTED:
+            case Status.LOADED:
+                return State.UNEXPLORED;
+            case Status.OPTIMAL:
+                return State.OPTIMAL;
+            case Status.UNBOUNDED:
+                return State.UNBOUNDED;
+            default:
+                return State.FAILED;
+        }
 
-        this.dispose();
-
-        super.finalize();
-    }
-
-    GRBModel getDelegateSolver() {
-        return myDelegateSolver;
     }
 
 }

@@ -8,6 +8,7 @@
     <artifactId>ojalgo-gurobi</artifactId>
     <name>ojAlgo-gurobi</name>
     <description>ojAlgo and GUROBI integration</description>
+    <url>https://github.com/optimatika/ojAlgo-gurobi</url>
 
     <properties>
 

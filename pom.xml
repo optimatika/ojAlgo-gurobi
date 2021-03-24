@@ -1,30 +1,37 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.ojalgo</groupId>
-    <version>3.0.0-SNAPSHOT</version>
     <artifactId>ojalgo-gurobi</artifactId>
+    <version>3.0.0</version>
     <name>ojAlgo-gurobi</name>
     <description>ojAlgo and GUROBI integration</description>
-    <url>https://github.com/optimatika/ojAlgo-gurobi</url>
-
-    <properties>
-
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-
-        <!-- You have to change this! -->
-        <path.installation.gurobi>/Library/gurobi911/mac64</path.installation.gurobi>
-        <!-- <path.installation.gurobi>/opt/gurobi911/linux64</path.installation.gurobi> -->
-
-        <path.jar.gurobi>${path.installation.gurobi}/lib/gurobi.jar</path.jar.gurobi>
-        <path.native.gurobi>${path.installation.gurobi}/bin</path.native.gurobi>
-
-    </properties>
-
+    <url>http://ojalgo.org</url>
+    <organization>
+        <name>Optimatika</name>
+        <url>http://optimatika.se</url>
+    </organization>
+    <developers>
+        <developer>
+            <id>apete</id>
+            <name>Anders Peterson</name>
+            <email>apete@optimatika.se</email>
+            <organization>Optimatika</organization>
+            <organizationUrl>http://optimatika.se</organizationUrl>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>MIT</name>
+            <url>https://github.com/optimatika/ojAlgo-gurobi/blob/main/LICENSE</url>
+        </license>
+    </licenses>
+    <scm>
+        <url>https://github.com/optimatika/ojAlgo-gurobi</url>
+        <connection>https://github.com/optimatika/ojAlgo-gurobi.git</connection>
+        <developerConnection>git@github.com:optimatika/ojAlgo-gurobi.git</developerConnection>
+    </scm>
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -35,7 +42,16 @@
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
-
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <!-- You have to change this! -->
+        <path.installation.gurobi>/Library/gurobi911/mac64</path.installation.gurobi>
+        <!-- <path.installation.gurobi>/opt/gurobi911/linux64</path.installation.gurobi> -->
+        <path.jar.gurobi>${path.installation.gurobi}/lib/gurobi.jar</path.jar.gurobi>
+        <path.native.gurobi>${path.installation.gurobi}/bin</path.native.gurobi>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>gurobi</groupId>
@@ -76,9 +92,61 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
+                <configuration>
+                    <includes>
+                        <include>**/*.java</include>
+                    </includes>
+                    <excludedGroups>slow,unstable</excludedGroups>
+                    <argLine>-Djava.library.path=${path.native.gurobi}</argLine>
+                    <environmentVariables>
+                        <LD_LIBRARY_PATH>${path.native.gurobi}</LD_LIBRARY_PATH>
+                    </environmentVariables>
+                </configuration>
+                <dependencies />
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
@@ -91,21 +159,5 @@
                 </configuration>
             </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M5</version>
-                    <configuration>
-                        <argLine>-Djava.library.path=${path.native.gurobi}</argLine>
-                        <environmentVariables>
-                            <LD_LIBRARY_PATH>${path.native.gurobi}</LD_LIBRARY_PATH>
-                        </environmentVariables>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
-
 </project>

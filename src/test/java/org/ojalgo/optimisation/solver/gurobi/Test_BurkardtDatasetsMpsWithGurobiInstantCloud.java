@@ -22,16 +22,16 @@
 package org.ojalgo.optimisation.solver.gurobi;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.ojalgo.optimisation.ExpressionsBasedModel;
+import org.ojalgo.optimisation.Optimisation;
 import org.ojalgo.optimisation.linear.BurkardtDatasetsMps;
 
-@Disabled
-public class BurkardtDatasetsMpsWithGurobi extends BurkardtDatasetsMps {
+
+public class Test_BurkardtDatasetsMpsWithGurobiInstantCloud extends BurkardtDatasetsMps {
 
     @BeforeAll
     public static void configure() {
-        ExpressionsBasedModel.addPreferredSolver(SolverGurobi.INTEGRATION);
+        ExpressionsBasedModel.addPreferredSolver(SolverGurobi.newInstantCloudIntegration(InstantCloudAPIConfig.ACCESSKEY, InstantCloudAPIConfig.SECRET));
     }
 
 }

@@ -1,30 +1,50 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
-        <groupId>org.ojalgo</groupId>
-        <version>2.47.4-SNAPSHOT</version>
+    <groupId>org.ojalgo</groupId>
+    <version>3.0.0-SNAPSHOT</version>
     <artifactId>ojalgo-gurobi</artifactId>
     <name>ojAlgo-gurobi</name>
     <description>ojAlgo and GUROBI integration</description>
+    <url>https://github.com/optimatika/ojAlgo-gurobi</url>
+
     <properties>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
+
         <!-- You have to change this! -->
-        <path.installation.gurobi>/Library/gurobi751</path.installation.gurobi>
-        <path.jar.gurobi>${path.installation.gurobi}/mac64/lib/gurobi.jar</path.jar.gurobi>
-        <path.native.gurobi>${path.installation.gurobi}/mac64/bin</path.native.gurobi>
+        <path.installation.gurobi>/Library/gurobi911/mac64</path.installation.gurobi>
+        <!-- <path.installation.gurobi>/opt/gurobi911/linux64</path.installation.gurobi> -->
+
+        <path.jar.gurobi>${path.installation.gurobi}/lib/gurobi.jar</path.jar.gurobi>
+        <path.native.gurobi>${path.installation.gurobi}/bin</path.native.gurobi>
+
     </properties>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>gurobi</groupId>
             <artifactId>gurobi</artifactId>
-            <version>7.5.1</version>
+            <version>9.1.1</version>
             <scope>system</scope>
             <systemPath>${path.jar.gurobi}</systemPath>
         </dependency>
-                <dependency>
+        <dependency>
             <groupId>org.ojalgo</groupId>
             <artifactId>ojalgo</artifactId>
             <version>48.4.1</version>
@@ -32,7 +52,7 @@
         <dependency>
             <groupId>org.ojalgo</groupId>
             <artifactId>ojalgo</artifactId>
-            <version>48.3.2-SNAPSHOT</version>
+            <version>48.4.1</version>
             <classifier>tests</classifier>
             <type>test-jar</type>
             <scope>test</scope>
@@ -56,15 +76,36 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.8</version>
+                <extensions>true</extensions>
                 <configuration>
-                    <argLine>-Djava.library.path=${path.native.gurobi}</argLine>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
             </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.0.0-M5</version>
+                    <configuration>
+                        <argLine>-Djava.library.path=${path.native.gurobi}</argLine>
+                        <environmentVariables>
+                            <LD_LIBRARY_PATH>${path.native.gurobi}</LD_LIBRARY_PATH>
+                        </environmentVariables>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
+
 </project>
